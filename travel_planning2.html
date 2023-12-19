@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/travel_planning2.css">
+    <title>Change display from event</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src='https://www.bing.com/api/maps/mapcontrol?callback=GetMap&key=[Ao17Nw3n1SnMra4LWDlZLnf08jiWtNkU3xA0erhFHE16tXWn4J7ns3eUOypWG1BN]'></script>
+
+</head>
+
+<body>
+
+
+    <!-- MAP[START] -->
+    <h3>旅行に行こう！!</h3>
+    <div class="space10"></div>
+    <table>
+        <tr>
+            <td colspan="2">
+                <div class="choice">
+                    <select name="place" id="mapplace">
+                        <option></option>
+                    </select>
+                    <button id='move'>ここに決定!</button>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <!-- rowspanで〇行分くっつけられる -->
+            <td rowspan="2" id="topnisuru">
+                <!-- 地図の表示 -->
+                <div id="maparea">
+                    <h4>ここに行くよ</h4>
+                    <div id="myMap"></div>
+                </div>
+            </td>
+            <td>
+                <!-- 天気予報結果 -->
+                <div id="tenkiarea">
+                    <h5>天気はどうかな？</h5>
+                    <div id="outputspace">
+                        <div id="now"></div>
+                        <div id="whether"></div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <!-- ガイドブック検索 -->
+                <div id="guidebooktenkiarea">
+                    <h5>ガイドブックを用意しよう！</h5>
+                    <div id="book"></div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <!-- tableのmemoエリアを下部で仕切りなおすため題名だけで１行 -->
+            <td colspan="2">
+                <h4>やりたいこと 行きたいところ 注意点</h4>
+            </td>
+        </tr>
+        <tr>
+            <td id="memotop">
+                <!-- 計画メモ -->
+                <div id="memoarea">
+                    <div id="planningmemo">
+                        <table frame="box" rules="none" id="box">
+
+                            <tr>
+                                <!-- memoのtitle: -->
+                                <th scope="row" class="row">
+                                    TITLE:
+                                </th>
+                                <td class="memotd">
+                                    <!-- title入力 -->
+                                    <input type="text" id="key">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="row">
+                                    NOTE:
+                                </th>
+                                <td class="memotd">
+                                    <!-- memo内容入力 -->
+                                    <textarea id="memo"></textarea>
+                                </td>
+                            </tr>
+                        </table>
+                        <ul>
+                            <li id="save" class="btn">Save</li>
+                            <li id="clear" class="btn">Clear</li>
+                            <li id="recordclear" class="btn">Record Clear</li>
+                        </ul>
+                        <div id="hozon">
+                            <!-- 保存メモのタイトルとメモの表示場所を記載 -->
+                            <!-- <table class="head"><tr>
+                    <th id="titlehead">TITLE:</th>
+                    <td id="memohead">NOTE:</td>
+                    </table> -->
+            </td>
+            <td>
+                <div id="overflowyou">
+                    <table id="list">
+                        <!-- ここに追加データが挿入される -->
+                    </table>
+                </div>
+            </td>
+            </div>
+        </tr>
+    </table>
+
+    <!-- [ MapTypeId ] https://msdn.microsoft.com/en-us/library/mt712700.aspx -->
+
+    <script>
+        function GetMap() {
+            map = new Microsoft.Maps.Map('#myMap', {
+                center: new Microsoft.Maps.Location(35.681236, 139.767125), //Location center position
+                mapTypeId: Microsoft.Maps.MapTypeId.load, //Type: [load, aerial,canvasDark,canvasLight,birdseye,grayscale,streetside]
+                zoom: 12  //Zoom:1=zoomOut, 20=zoomUp[ 1~20 ]
+            });
+            console.log(map);
+        }
+
+        //Initialization processing
+        // map変数はfunctionの外に設定する。functionの外でも使うので中に入れると使えなくなる
+        let city = ["東京", "京都", "沖縄"];
+        // lat=緯度、lon=経度
+        let lat = [35.681236, 34.985849, 26.20013];
+        let lon = [139.767125, 135.758767, 127.646645];
+        area = [130000, 260000, 471000];
+
+        // 都市選択のoptionを配列から作る
+        for (let i = 0; i < 3; i++) {
+            $("#mapplace").append("<option>" + city[i] + "</option>");
+        }
+        // mapをとりあえず東京で表示する
+        let map;
+
+        //map.setView: Display change of map
+        // 選んだ都市の緯度経度を取得。lat lonに入れる
+        document.getElementById("move").onclick = function () {
+
+            // selectedIndexでmapplaceの内容（インデックス）をとる。letは任意だけどわかりやすいよう同じ名前
+            let selectedIndex = $("#mapplace")[0].selectedIndex;
+            console.log(selectedIndex);
+
+            //設定を変える
+            map.setView({
+                // // 航空写真にする
+                // mapTypeId: Microsoft.Maps.MapTypeId.aerial,
+                // 場所を変える
+                // cityの配列の番号ではなく、mapplaceのoptionの個数について0~採番される。最初<option></option>で空欄始まりにしてるので、空欄0、東京1、と配列とずれるので-1スタートでOK
+                center: new Microsoft.Maps.Location(lat[selectedIndex - 1], lon[selectedIndex - 1]),
+                zoom: 12
+
+            });
+
+            // 天気を出す
+            $.getJSON("https://www.jma.go.jp/bosai/forecast/data/overview_forecast/" + area[selectedIndex - 1] + ".json", function (w) {
+                let whether = w.text;
+                //日時
+                let now = new Date().toString() //firebaseはnew dateの関数に対応していないのでtoStringで文字に変換
+                // $("#whether").append(<h> +=now</h>);
+                // $("#whether").append(<h>whether</h>);
+                $("#now").html(now + "<br>");
+                $("#whether").html(whether);
+            });
+
+            // ガイドブックを探す
+            // 検索履歴をまずきれいにする
+            $("#book").empty();
+            const selectedCity = $("#mapplace option:selected").text();
+            const url = "https://www.googleapis.com/books/v1/volumes?q=" + selectedCity + "ガイドブック";
+            axios.get(url).then(function (res) {
+                console.log(res.data);
+                const items = res.data.items
+                // 配列の中身を一つずつ取り出してみて表示する
+                // 6. 出版社も表示してみよう！（データ構造はconsole.logで確認！！）※課題
+                items.forEach(function (item) {
+                    //onclick以降chat GPIに作ってもらって。"'/の使い方要復習
+                    // クリックすると別タブが開くようにした
+                    $("#book").append("<ul><li><button onclick=\"window.open('" + item.volumeInfo.previewLink + "', '_blank')\"> " + item.volumeInfo.title + "</button></li></ul>");
+                });
+            })
+        }
+
+        // 計画メモ。moveのonclickとは独立しててOK
+        //1.Save クリックイベント
+        $("#save").on("click", function () {
+            // ローカルストレージに保存
+            const key = $("#key").val();
+            console.log(key);
+            const memo = $("#memo").val();
+            console.log(memo);
+
+            localStorage.setItem(key, memo);
+            // テーブルに行を追加するfunctionを後で設定。持ってくる場所を作っておく。
+            edit(key, memo);
+            // 入力フィールドをきれいにする
+            $("#key, #memo").val("");
+
+        });
+
+        //2.clear クリックイベント
+        $("#clear").on("click", function () {
+            $("#key , #memo").val("");
+        });
+
+        //3.recordclear クリックイベント
+        $("#recordclear").on("click", function () {
+            localStorage.clear();
+            $("#list").empty();
+        });
+
+        //4.ページ読み込み：保存データ取得表示
+        $(document).ready(function () {
+            updateTable();
+        });
+
+        function updateTable() {
+            $("#list").empty(); // テーブルをクリア
+            for (let i = 0; i < localStorage.length; i++) {
+                // ローカルストレージのキーが0から採番されている
+                const key = localStorage.key(i);
+                // kei(i)に対応したmemoを呼び込む
+                const memo = localStorage.getItem(key);
+                console.log(key);
+                //saveの時同様にテーブルに行を追加するfunctionを後で設定。持ってくる場所を作っておく。
+                edit(key, memo);
+            }
+        }
+
+        // テーブルに表示するfunction
+        function edit(key, memo) {
+            const row = $("<tr><th id='thkey'>" + key + "</th><td id='memoinput'>" + memo + "</td><td class='btn'></td><td class='btn'></tr>");
+            // rowをlistのidに入れる
+            $("#list").append(row);
+
+            // tableに追加する編集ボタンを作る
+            const editBtn = $("<a class=`editBtn`>編集する</a>").on("click", function () {
+                // 編集のfunction関数を実施する
+                editMemo(key);
+            });
+            // テーブルで空にしてた3つ目のtdにeditBtnを入れる。この書き方覚えておく         
+            row.find("td:nth-child(3)").append(editBtn);
+
+            // tableに追加する削除ボタンを作る
+            const deleteBtn = $("<a class=`deleteBtn`>削除する</a>").on("click", function () {
+                // 編集のfunction関数を実施する
+                deleteMemo(key);
+            });
+            row.find("td:last-child").append(deleteBtn);
+        }
+
+        // テーブルを編集する関数
+        function editMemo(key) {
+            // keyに基づいて編集処理を行う
+            const editedMemo = prompt("編集したらOKを押してください。", localStorage.getItem(key));
+            // キャンセルを押した場合はnull、OKが押されたらtrueが返され、入力したテキストがlocal strageにset(保存)され、updateTable関数を呼び出しテーブルが更新される
+            if (editedMemo !== null) {
+                localStorage.setItem(key, editedMemo);
+                // 編集後にテーブルを更新
+                updateTable();
+            }
+        }
+
+        // テーブルを削除する関数
+        function deleteMemo(key) {
+            // keyに基づいて編集処理を行う
+            localStorage.removeItem(key);
+            // 編集後にテーブルを更新
+            updateTable();
+        }
+
+    </script>
+
+</body>
+
+</html>
